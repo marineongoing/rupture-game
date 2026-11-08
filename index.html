@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Rupture Game ✿</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffe9f1; --bg2:#ffd6e6; --ink:#4a2c40; --pink:#ff8fb8; --pink-d:#e0608f;
+    --mint:#a8e6cf; --mint-d:#6cc4a1; --cream:#fff8ec; --lav:#cdb8ff; --yellow:#ffe08a; --sun:#ff7a4d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Pixelify Sans',monospace; color:var(--ink);
+    background:
+      radial-gradient(circle at 1px 1px, rgba(224,96,143,.18) 1.5px, transparent 0) 0 0/16px 16px,
+      linear-gradient(180deg,var(--bg),var(--bg2));
+    display:flex; align-items:center; justify-content:center; min-height:100vh; padding:14px;
+    -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none;
+  }
+  .console{
+    width:100%; max-width:390px; background:var(--lav); border-radius:18px 18px 48px 18px;
+    padding:16px 16px 22px; box-shadow:0 0 0 4px var(--ink), 8px 8px 0 4px var(--ink);
+  }
+  .screen-wrap{background:#7d6a8f;border-radius:10px;padding:12px 12px 8px;box-shadow:inset 0 0 0 3px var(--ink)}
+  .led{display:flex;align-items:center;gap:6px;font-size:8px;font-family:'Press Start 2P';color:#e8dcff;margin-bottom:8px}
+  .mute{margin-left:auto;font-family:'Press Start 2P';font-size:8px;background:var(--cream);color:var(--ink);border:2px solid var(--ink);padding:3px 5px;cursor:pointer}
+  .led i{width:8px;height:8px;border-radius:50%;background:#ff5d8f;box-shadow:0 0 6px #ff5d8f;animation:blink 1.6s infinite}
+  .screen{position:relative;border:3px solid var(--ink);height:470px;overflow:hidden;background:#2b1830;display:flex;flex-direction:column}
+  .screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:20;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 2px,transparent 2px 4px)}
+  #bgv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:0}
+  #tint{position:absolute;inset:0;z-index:1;transition:background .6s}
+  video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+  .stage{position:relative;z-index:2;flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+  .view{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .hidden{display:none!important}
+
+  /* title */
+  .logo{font-family:'Pixelify Sans';font-weight:700;font-size:30px;line-height:1.05;text-align:center;color:#fff;
+    text-shadow:3px 3px 0 var(--ink),-2px -2px 0 var(--pink-d)}
+  .logo small{display:block;font-size:13px;font-weight:600;margin-top:8px;color:var(--yellow);text-shadow:2px 2px 0 var(--ink)}
+  .press{margin-top:30px;font-family:'Press Start 2P';font-size:10px;color:#fff;text-shadow:2px 2px 0 var(--ink);animation:blink 1s steps(1) infinite}
+
+  /* battle */
+  #battle{justify-content:stretch}
+  .slot{position:absolute;display:flex;align-items:flex-end;gap:6px}
+  .foe{top:12px;right:8px;flex-direction:row-reverse;align-items:flex-start}
+  .me{bottom:6px;left:8px}
+  .plat{position:absolute;border-radius:50%;background:rgba(168,230,207,.85);border:2px solid var(--ink)}
+  .plat.f{width:112px;height:22px;top:86px;right:2px}
+  .plat.m{width:130px;height:24px;bottom:2px;left:-4px}
+  canvas.spr{width:88px;height:88px;image-rendering:pixelated;position:relative;z-index:2}
+  .foe canvas.spr{animation:bob 1.4s ease-in-out infinite}
+  .me canvas.spr{width:104px;height:104px}
+  .box{background:var(--cream);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:5px 7px;font-size:13px;font-weight:600;min-width:128px;position:relative;z-index:3}
+  .box .lv{float:right;font-size:11px}
+  .hpbar{display:flex;align-items:center;gap:4px;margin-top:4px;font-family:'Press Start 2P';font-size:7px;color:var(--sun)}
+  .hpbar .bar{flex:1;height:7px;background:#eee;border:1px solid var(--ink)}
+  .hpbar b{display:block;height:100%;width:100%;background:var(--mint-d);transition:width .8s steps(8),background .3s}
+  .foe .box{margin-top:4px}
+  .me .box{margin-bottom:70px}
+  .shake{animation:shake .4s 2}
+  .hit{animation:hit .12s 4}
+
+  /* photo */
+  .polaroid{background:#fff;border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);padding:8px 8px 6px;max-width:84%;transform:rotate(-2deg);animation:popin .35s steps(4)}
+  .polaroid img{display:block;width:100%;max-height:250px;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;background:#000}
+  .err{text-align:center;color:#fff;animation:glitch .25s steps(2) infinite}
+  .err .n{font-family:'Press Start 2P';font-size:54px;color:var(--pink);text-shadow:4px 0 #6cf,-4px 0 #f36}
+  .err .m{font-family:'Press Start 2P';font-size:11px;margin:16px 0 10px;color:var(--yellow)}
+  .err .s{font-size:14px;opacity:.85}
+  @keyframes glitch{0%{transform:translate(0)}50%{transform:translate(-2px,1px)}100%{transform:translate(2px,-1px)}}
+  .rec{display:inline-block;cursor:pointer;margin-top:26px;font-family:'Pixelify Sans';font-weight:700;font-size:15px;color:var(--ink);text-decoration:none;
+    background:var(--yellow);border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:10px 14px;animation:bounce 1.2s infinite}
+  .rec:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .lw{position:fixed;inset:0;z-index:50;background:rgba(74,44,64,.6);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;user-select:text;-webkit-user-select:text}
+  .paper{max-width:420px;margin:0 auto;background:var(--cream);border:4px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:18px 16px;
+    background-image:repeating-linear-gradient(0deg,transparent 0 27px,rgba(224,96,143,.15) 27px 28px)}
+  .lhead{font-weight:700;font-size:18px;text-align:center;color:var(--pink-d);margin-bottom:12px}
+  .lhead small{display:block;font-size:12px;color:var(--ink);font-weight:400;margin-top:3px}
+  .paper label{display:block;font-size:13px;font-weight:600;margin:10px 0 0}
+  .paper input,.paper textarea{display:block;width:100%;margin-top:4px;font-family:'Pixelify Sans',monospace;font-size:16px;color:var(--ink);
+    background:#fff;border:2px solid var(--ink);padding:7px 8px;border-radius:0;resize:vertical}
+  .stars{font-size:28px;color:#d8c8d8;margin-top:2px;cursor:pointer;letter-spacing:4px}
+  .stars span.on{color:var(--yellow);text-shadow:2px 2px 0 var(--ink)}
+  .lbtn{display:block;width:100%;text-align:center;margin-top:14px;font-family:'Pixelify Sans';font-weight:700;font-size:16px;color:var(--ink);text-decoration:none;
+    background:#fff;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:11px;cursor:pointer}
+  .lbtn.main{background:var(--pink);font-size:18px}
+  .lbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .lalt{text-align:center;font-size:13px;margin-top:10px}
+  .lalt a,.lalt button{color:var(--pink-d);font-family:inherit;font-size:13px;background:none;border:none;text-decoration:underline;cursor:pointer;padding:0}
+  .lstatus{text-align:center;font-size:14px;margin-top:8px;color:var(--pink-d);min-height:1em}
+  .sent{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(74,44,64,.7);padding:20px}
+  .sent div{background:var(--cream);border:4px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:22px 18px;text-align:center;font-size:18px;max-width:340px}
+  .sent b{display:block;font-size:22px;color:var(--pink-d);margin-bottom:8px}
+  .lnote{text-align:center;font-size:12px;opacity:.7;margin-top:8px}
+  .polaroid.slide{width:80%;transform:rotate(-1.5deg)}
+  .polaroid.slide img{aspect-ratio:1/1;max-height:none;image-rendering:auto;transition:opacity .35s}
+  .polaroid.vid{width:58%;transform:rotate(2deg)}
+  .polaroid video{display:block;width:100%;max-height:290px;object-fit:contain;background:#000;position:static;opacity:1;height:auto}
+  .polaroid .cap{font-size:13px;font-weight:600;text-align:center;margin-top:5px}
+  .tag{position:absolute;top:10px;left:10px;font-family:'Press Start 2P';font-size:8px;background:var(--yellow);border:2px solid var(--ink);padding:5px 6px;z-index:3}
+
+  /* letter */
+  .letter{background:var(--cream);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);padding:18px 16px;margin:0 14px;
+    font-size:18px;line-height:1.4;text-align:center;animation:popin .4s steps(4)}
+  .letter .h{color:var(--pink-d);font-size:22px}
+
+  /* end card */
+  .endcard{text-align:center;color:#fff;text-shadow:2px 2px 0 var(--ink);padding:0 12px}
+  .endcard .fin{font-family:'Press Start 2P';font-size:12px;color:var(--yellow)}
+  .endcard .name{font-size:24px;font-weight:700;margin:10px 0 16px}
+  .trophies{display:grid;grid-template-columns:1fr 1fr;gap:6px;text-shadow:none}
+  .trophies div{background:var(--cream);color:var(--ink);border:2px solid var(--ink);padding:5px;font-size:12px;font-weight:600}
+  .trophies div.off{background:#6d5a7c;color:#c9b8d8}
+
+  /* dialog + menu */
+  .dialog{position:relative;z-index:3;margin:0 6px 6px;background:#fff;border:3px solid var(--ink);border-radius:4px;
+    box-shadow:inset 0 0 0 3px #fff, inset 0 0 0 5px var(--pink);padding:11px 13px;font-size:16px;line-height:1.32;min-height:76px;cursor:pointer}
+  .dialog .next{position:absolute;right:10px;bottom:4px;font-size:10px;animation:bounce .6s infinite;color:var(--pink-d)}
+  .menu{position:relative;z-index:3;margin:0 6px 8px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .menu button,.menu a{display:block;text-decoration:none;font-family:'Pixelify Sans';font-size:15px;font-weight:700;color:var(--ink);background:#fff;border:3px solid var(--ink);
+    padding:8px 6px 8px 20px;text-align:left;cursor:pointer;position:relative;box-shadow:3px 3px 0 var(--ink)}
+  .menu button small,.menu a small{display:block;font-size:10px;font-weight:400;opacity:.7}
+  .menu button::before,.menu a::before{content:"▶";position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:9px;opacity:0;color:var(--pink-d)}
+  .menu button.sel,.menu a.sel{background:var(--yellow)}
+  .menu button.sel::before,.menu a.sel::before{opacity:1}
+  .menu button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .menu.one{grid-template-columns:1fr}
+
+  /* controls */
+  .pads{display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding:0 6px}
+  .dpad{position:relative;width:78px;height:78px}
+  .dpad button{position:absolute;width:26px;height:26px;background:var(--ink);border:none;cursor:pointer;color:#e8dcff;font-size:9px}
+  .dpad .u{left:26px;top:0;border-radius:4px 4px 0 0}.dpad .d{left:26px;bottom:0;border-radius:0 0 4px 4px}
+  .dpad .l{left:0;top:26px;border-radius:4px 0 0 4px}.dpad .r{right:0;top:26px;border-radius:0 4px 4px 0}
+  .dpad .c{left:26px;top:26px;border-radius:0;cursor:default}
+  .ab{display:flex;gap:12px;transform:rotate(-20deg)}
+  .ab button{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);font-family:'Press Start 2P';font-size:11px;color:var(--ink);cursor:pointer;box-shadow:2px 3px 0 var(--ink)}
+  .ab .a{background:var(--pink)}.ab .b{background:var(--mint);margin-top:16px}
+  .ab button:active,.dpad button:active{transform:translateY(2px)}
+  .brand{margin-top:14px;text-align:center;font-family:'Press Start 2P';font-size:8px;color:#5b4470;letter-spacing:1px}
+
+  .flash{animation:flash .12s 4}
+  .heart-pop{position:absolute;z-index:4;font-size:18px;color:var(--pink-d);pointer-events:none;animation:pop 1.1s forwards;text-shadow:1px 1px 0 #fff}
+
+  @keyframes blink{50%{opacity:0}}
+  @keyframes bob{50%{transform:translateY(-5px)}}
+  @keyframes bounce{50%{transform:translateY(-3px)}}
+  @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  @keyframes hit{50%{opacity:0}}
+  @keyframes popin{from{transform:scale(.4) rotate(-2deg);opacity:0}}
+  @keyframes pop{to{transform:translateY(-60px);opacity:0}}
+  @keyframes flash{50%{filter:brightness(3)}}
+</style>
+</head>
+<body>
+<div class="console">
+  <div class="screen-wrap">
+    <div class="led"><i></i> BATTERY<button id="mute" class="mute">♪ ON</button></div>
+    <div class="screen" id="screen">
+      <video id="vid" src="assets/sunset.mp4" muted loop playsinline autoplay preload="auto"></video>
+      <canvas id="bgv" width="84" height="120"></canvas>
+      <div id="tint"></div>
+
+      <div class="stage" id="stage">
+        <!-- TITLE -->
+        <div class="view" id="v-title">
+          <div class="logo">THE RUPTURE<br>GAME<small>✿ Marine &amp; Mathis ✿</small></div>
+          <div class="press">PRESS START</div>
+        </div>
+
+        <!-- BATTLE -->
+        <div class="view hidden" id="v-battle">
+          <div class="plat f"></div><div class="plat m"></div>
+          <div class="slot foe" id="foe">
+            <canvas class="spr" id="sprM" width="16" height="16"></canvas>
+            <div class="box">MARINE <span class="lv">♀ Nv.99</span>
+              <div class="hpbar">PV<span class="bar"><b id="hpM"></b></span></div></div>
+          </div>
+          <div class="slot me" id="me">
+            <canvas class="spr" id="sprP" width="16" height="16"></canvas>
+            <div class="box">MATHIS <span class="lv">♂ Nv.??</span>
+              <div class="hpbar">PV<span class="bar"><b id="hpP"></b></span></div></div>
+          </div>
+        </div>
+
+        <!-- PHOTO -->
+        <div class="view hidden" id="v-photo">
+          <div class="tag" id="ptag"></div>
+          <div class="polaroid"><img id="pimg" alt=""><div class="cap" id="pcap"></div></div>
+        </div>
+
+        <!-- VIDEO -->
+        <div class="view hidden" id="v-video">
+          <div class="tag" id="vtag"></div>
+          <div class="polaroid vid"><video id="pvid" playsinline preload="auto"></video></div>
+        </div>
+
+        <!-- 404 -->
+        <div class="view hidden" id="v-e404">
+          <div class="err"><div class="n">404</div><div class="m">RELATION NOT FOUND</div><div class="s">La relation que vous cherchez n'existe plus<br>ou a été déplacée.</div></div>
+        </div>
+
+        <!-- SLIDES -->
+        <div class="view hidden" id="v-slides">
+          <div class="tag" id="scount"></div>
+          <div class="polaroid slide"><img id="simg" alt=""></div>
+        </div>
+
+        <!-- LETTER -->
+        <div class="view hidden" id="v-letter"><div class="letter" id="ltext"></div></div>
+
+        <!-- END -->
+        <div class="view hidden" id="v-end"><div class="endcard" id="endcard"></div></div>
+      </div>
+
+      <div class="dialog hidden" id="dialog"><span id="text"></span><span class="next" id="next">▼</span></div>
+      <div class="menu hidden" id="menu"></div>
+    </div>
+  </div>
+
+  <div class="pads">
+    <div class="dpad">
+      <button class="u" data-k="up" aria-label="Haut">▲</button>
+      <button class="l" data-k="left" aria-label="Gauche">◀</button>
+      <button class="c" tabindex="-1" aria-hidden="true"></button>
+      <button class="r" data-k="right" aria-label="Droite">▶</button>
+      <button class="d" data-k="down" aria-label="Bas">▼</button>
+    </div>
+    <div class="ab">
+      <button class="b" data-k="b" aria-label="Retour">B</button>
+      <button class="a" data-k="a" aria-label="Valider">A</button>
+    </div>
+  </div>
+  <div class="brand">NINTENDOUX ✦ POCKET</div>
+</div>
+
+<div id="lw" class="lw hidden">
+  <div class="paper">
+    <div class="lhead">✉ LETTRE DE RECOMMANDATION<small>à l'attention du prochain copain de Marine</small></div>
+    <label>Rédigée par<input id="f-auteur" value="Mathis"></label>
+    <label>Durée de la mission<input id="f-duree" placeholder="ex : 2 ans et quelques"></label>
+    <label>Note globale
+      <div class="stars" id="f-stars"><span data-n="1">★</span><span data-n="2">★</span><span data-n="3">★</span><span data-n="4">★</span><span data-n="5">★</span></div></label>
+    <label>Ses plus grandes qualités<textarea id="f-qualites" rows="3" placeholder="Sois honnête... et généreux"></textarea></label>
+    <label>Ses petits défauts (avec bienveillance)<textarea id="f-defauts" rows="2"></textarea></label>
+    <label>Conseils au prochain<textarea id="f-conseils" rows="3" placeholder="Ce qu'il doit savoir pour être à la hauteur"></textarea></label>
+    <label>Mot de la fin<textarea id="f-fin" rows="2"></textarea></label>
+    <button id="send" class="lbtn main">✉ ENVOYER À MARINE</button>
+    <div class="lstatus" id="lstatus"></div>
+    <div class="lalt">Ça ne marche pas ? <a id="send2" href="#">Envoyer par mon appli mail</a> · <button id="copy">Copier la lettre</button></div>
+    <form id="fs" action="https://formsubmit.co/marinecerriall@gmail.com" method="POST" enctype="multipart/form-data" style="display:none">
+      <input type="hidden" name="_subject" value="Lettre de recommandation pour Marine">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_template" value="box">
+      <input type="hidden" name="_next" id="fs-next">
+      <textarea name="Lettre" id="fs-text"></textarea>
+      <input type="file" name="attachment" id="fs-file">
+    </form>
+    <div class="lnote">Destinataire : marinecerriall@gmail.com</div>
+    <button class="lbtn" id="lclose">◀ Retour au jeu</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* =================== SCÉNARIO =================== */
+const INTRO = [
+  {v:"title", t:"Bienvenue dans THE RUPTURE GAME ✿"},
+  {v:"title", t:"Ta mission du jour : quitter MARINE comme un homme."},
+  {v:"title", t:"Respire un grand coup. Le boss final t'attend."},
+  {v:"battle", t:"Une MARINE sauvage apparaît !", fx:"enter", m:"battle"},
+];
+
+const ENDINGS = {
+  martine: { name:"Erreur 404", tone:"humour", steps:[
+    {v:"battle", t:"MATHIS utilise MARTINE !", fx:"atkP"},
+    {v:"battle", t:"Ce n'est pas très efficace...", fx:"shakeM"},
+    {v:"battle", t:"MARINE contre-attaque : MATHILDE !", fx:"atkM"},
+    {v:"battle", t:"C'est super efficace ! ✨", fx:"hitP", hpP:15},
+    {v:"battle", t:"MATHIS est affaibli... par un surnom."},
+    {v:"battle", t:"MATHIS utilise EN FAIT J'AI MENTI !", fx:"atkP"},
+    {v:"battle", t:"« En fait j'ai menti, je veux pas te quitter, c'était un test. »"},
+    {v:"battle", t:"C'est super efficace ! MARINE est K.O.", fx:"hitM", hpM:0},
+    {v:"e404", t:"ERREUR : cette relation est introuvable.", fx:"err"},
+  ]},
+  fuir: { name:"La fuite impossible", tone:"humour", steps:[
+    {v:"battle", t:"MATHIS tente de fuir...", fx:"shakeP"},
+    {v:"battle", t:"Impossible ! Tu es venu exprès pour rompre en vrai. On ne fait pas tout ce trajet pour se défiler, et de toute manière tu es enfermé chez elle."},
+    {v:"battle", t:"MATHIS fait le mort.", fx:"hitP"},
+    {v:"battle", t:"MARINE te connaît par cœur. Ça ne marche pas.", fx:"shakeM"},
+    {v:"video", src:"assets/buisson.mp4", tag:"CAMOUFLAGE", t:"MATHIS se cache derrière un buisson... Le buisson, c'était MARINE.", hpP:40},
+    {v:"battle", t:"MARINE utilise ATTAQUE SURPRISE !", fx:"atkM", m:"battle"},
+    {v:"video", src:"assets/attaque-v2.mp4", tag:"ATTAQUE SURPRISE", t:"MARINE charge à toute vitesse !"},
+    {v:"battle", t:"C'est super efficace ! MATHIS est K.O.", fx:"hitP", hpP:0, m:"battle"},
+  ]},
+  muscles: { name:"Plus de muscles", tone:"piquant", steps:[
+    {v:"battle", t:"MATHIS utilise TROUVE UNE EXCUSE !", fx:"atkP"},
+    {v:"battle", t:"MATHIS cherche une excuse... il cherche encore..."},
+    {v:"battle", t:"Pendant 1 an, il ne s'est pas rendu compte qu'il n'était plus amoureux de MARINE.", fx:"shakeM"},
+    {v:"battle", t:"MARINE contre-attaque avec CLAIRVOYANCE !", fx:"atkM"},
+    {v:"video", src:"assets/clairvoyance.mp4", tag:"CLAIRVOYANCE", t:"Elle ne te croit pas... à moins que tu sois vraiment débile."},
+    {v:"battle", t:"Coup critique !", fx:"hitP", hpP:30, m:"battle"},
+    {v:"battle", t:"MATHIS vacille... Que doit-il faire ?", choice:[
+      {label:"J'AVOUE", sub:"la vérité vraie", steps:[
+        {v:"battle", t:"MATHIS utilise J'AVOUE !", fx:"atkP"},
+        {v:"battle", t:"« Oui, j'avoue, je suis resté pour le sexe et ton énorme cul. »"},
+        {v:"battle", t:"MARINE contre-attaque avec J'AVOUE AUSSI !", fx:"atkM"},
+        {v:"video", src:"assets/mog.mp4", tag:"MOG", t:"« J'avoue, je suis fraîche. »"},
+        {v:"battle", t:"MATHIS est dégoûté d'avoir fumble une baddie.", fx:"hitP", hpP:15, m:"battle"},
+      ]},
+      {label:"MISSION FINIE", sub:"ex-coach alternance", steps:[
+        {v:"battle", t:"MATHIS utilise MISSION FINIE !", fx:"atkP"},
+        {v:"battle", t:"« Maintenant que je t'ai aidée à trouver une alternance, j'ai plus rien à faire. »"},
+        {v:"battle", t:"MARINE utilise REDIRECTION : VA TROUVER UN TAFF AU LIEU D'ÊTRE AU CHÔMAGE ET DE ME FAIRE PERDRE MON TEMPS !", fx:"atkM"},
+        {v:"battle", t:"Redirection vers France Travail... C'est super efficace !", fx:"hitP", hpP:10, choice:[
+          {label:"FRANCE TRAVAIL", sub:"↗ francetravail.fr", href:"https://www.francetravail.fr"},
+          {label:"CONTINUER ▶", sub:"pointer plus tard", steps:[{endAs:"travail"}]},
+        ]},
+      ]},
+    ]},
+    {v:"battle", t:"MARINE utilise DE TOUTE MANIÈRE TOI T'AS PLUS DE MUSCLES !", fx:"atkM"},
+    {v:"video", src:"assets/muscles.mp4", tag:"ARCHIVES", t:"..."},
+    {v:"battle", t:"MATHIS a été mis K.O. et va repartir à la salle pour entamer son winter arc.", fx:"hitP", hpP:0, m:"battle"},
+    {v:"video", src:"assets/mannequin.mp4", tag:"K.O.", t:"MARINE mannequin, MATHIS vaurien."},
+  ]},
+  merci: { name:"Le coucher de soleil", tone:"douce", steps:[
+    {v:"battle", t:"MATHIS utilise DIRE MERCI."},
+    {v:"battle", t:"... Le combat s'arrête. MARINE baisse sa garde.", hpM:100, hpP:100},
+    {v:"photo", img:"assets/coucher.png", tag:"SOUVENIR", cap:"Notre dernier jour avant la pause", t:"Tu te souviens ? Notre dernier jour avant la pause, on est allés voir le coucher de soleil.", voice:true},
+    {v:"photo", img:"assets/coucher.png", tag:"SOUVENIR", cap:"Notre dernier jour avant la pause", t:"Un soleil qui se couche, c'est la fin de quelque chose...", voice:true},
+    {v:"sunset", t:"Peut-être qu'à cet instant, sans même le savoir, on a scellé notre destin...", voice:true},
+    {v:"sunset", t:"...et que ce soleil qui s'éteignait doucement dans la mer, c'était déjà nous deux.", voice:true},
+    {v:"letter", html:"<div class='h'>✿</div>Merci pour ce bout de chemin à deux.<br><br>Je t'ai aimé jusqu'au dernier rayon,<br>et même une fois le soleil couché,<br>une part de moi continuera de t'aimer. ♥", t:"MARINE a laissé un message.", voice:true},
+  ]},
+};
+const ORDER = ["martine","fuir","muscles","travail","merci"];
+ENDINGS.travail = { name:"Trouve un travail", steps:[] };
+const MOVES = [
+  {id:"martine", label:"MARTINE !", sub:"attaque surnom"},
+  {id:"fuir",    label:"FUIR",      sub:"tentative"},
+  {id:"muscles", label:"TROUVE UNE EXCUSE", sub:"esquive"},
+  {id:"merci",   label:"DIRE MERCI",sub:"???"},
+];
+const SECRET = [
+  {v:"sunset", t:"★ 100% COMPLÉTÉ ★ Tu as trouvé toutes les fins."},
+  {v:"sunset", t:"Badge obtenu : EX LÉGENDAIRE ★"},
+  {v:"slides", n:11, t:"Souvenirs débloqués ✿"},
+  {v:"sunset", t:"Effacer la sauvegarde « MARINE & MATHIS » ?"},
+  {v:"sunset", t:"▶ NON. Les souvenirs restent."},
+  {v:"title",  t:"MERCI D'AVOIR JOUÉ ✿", credits:true},
+];
+
+/* =================== SPRITES =================== */
+const MARINE = {pal:{k:"#3a2233",h:"#b5562f",s:"#f6cfb0",e:"#3a2233",c:"#ff8fb0",w:"#ffffff",j:"#7ea6d8"}, px:[
+"....kkkkkkkk....","...khhhhhhhhk...","..khhhhhhhhhhk..","..khhsssssshhk..",
+"..khseesseeshk..","..khcsssssschk..","..khssskkssshk..","..khhsssssshhk..",
+".khhhkwwwwkhhhk.",".khhkwwwwwwkhhk.",".khhkwwwwwwkhhk.",".khkswwwwwwskhk.",
+"..kkswwwwwwskk..","...kkwwwwwwkk...","....kjjjjjjk....","....kjjkkjjk...."]};
+const MATHIS = {pal:{k:"#3a2233",c:"#4a2c1c",C:"#7a4e34",s:"#f2c4a0",g:"#8fb27a",G:"#b3d39f",d:"#3d3d55"}, px:[
+"...kkk.kk.kkk...","..kccckcckccck..",".kcCccccccccCck.",".kccCccccccCcck.",
+".kcccccccccccck.","..kcccccccccck..","...kssccccssk...","..kkggggggggkk..",
+".kggggGGGGggggk.","kggggggggggggggk","ksggggggggggggsk","ksggggggggggggsk",
+".kkggggggggggkk.","..kddddddddddk..","..kddddkkddddk..","..kkkkk..kkkkk.."]};
+function drawSpr(id,s){const c=document.getElementById(id).getContext("2d");c.clearRect(0,0,16,16);
+  s.px.forEach((r,y)=>[...r].forEach((ch,x)=>{if(s.pal[ch]){c.fillStyle=s.pal[ch];c.fillRect(x,y,1,1);}}));}
+drawSpr("sprM",MARINE); drawSpr("sprP",MATHIS);
+
+/* =================== PIXEL SUNSET BG =================== */
+const vid=document.getElementById("vid"), bg=document.getElementById("bgv"), bctx=bg.getContext("2d");
+function paintBg(){
+  if(vid.readyState>=2 && vid.videoWidth){
+    const vw=vid.videoWidth, vh=vid.videoHeight, r=bg.width/bg.height;
+    let sw=vh*r, sh=vh; if(sw>vw){sw=vw;sh=vw/r;}
+    bctx.drawImage(vid,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,bg.width,bg.height);
+  } else { const g=bctx.createLinearGradient(0,0,0,bg.height);g.addColorStop(0,"#ff7a4d");g.addColorStop(.55,"#ffb27a");g.addColorStop(1,"#3b2a4a");bctx.fillStyle=g;bctx.fillRect(0,0,bg.width,bg.height);}
+  requestAnimationFrame(paintBg);
+}
+paintBg();
+function tryPlay(){ try{ const p=vid.play(); if(p&&p.catch)p.catch(()=>{});}catch(e){} }
+tryPlay();
+
+/* =================== SON =================== */
+let actx=null;
+function beep(f=880,d=.06,type="square",vol=.045){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();
+  const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(vol,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+d);
+  o.connect(g).connect(master||actx.destination);o.start();o.stop(actx.currentTime+d);}catch(e){}}
+const notes=(arr,step=110,d=.1)=>arr.forEach((f,i)=>setTimeout(()=>beep(f,d,"square"),i*step));
+
+/* =================== MUSIQUE (chiptune originale, fichiers audio) =================== */
+const bgm=new Audio(); bgm.loop=true; bgm.preload="auto"; bgm.setAttribute("playsinline","");
+let master=null, cur=null, muted=false;
+function audio(){ try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  try{ actx=actx||new(window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended")actx.resume();
+  if(!master){master=actx.createGain();master.gain.value=1;master.connect(actx.destination);} }catch(e){} return actx; }
+function music(name){
+  if(cur===name && !bgm.paused) return; cur=name;
+  try{ if(!bgm.src.endsWith("assets/"+name+"-v3.mp3")){ bgm.src="assets/"+name+"-v3.mp3"; }
+    bgm.volume=1; bgm.muted=muted; const p=bgm.play(); if(p&&p.catch)p.catch(()=>{}); }catch(e){}
+}
+function stopMusic(){ cur=null; try{bgm.pause();}catch(e){} }
+function toggleMute(){ muted=!muted; bgm.muted=muted; try{$("pvid").muted=muted;}catch(e){} audio(); if(master) master.gain.value=muted?0:1;
+  $("mute").textContent=muted?"♪ OFF":"♪ ON"; if(!muted && cur && bgm.paused){ const p=bgm.play(); if(p&&p.catch)p.catch(()=>{}); } }
+
+/* =================== VOIX DE MARINE (blabla mignon) =================== */
+const FORM={a:900,e:600,i:380,o:520,u:400,y:380};
+function babble(ch){
+  try{ audio(); if(!actx) return; const c=ch.toLowerCase(); if(!/[a-zàâäéèêëîïôöùûüç]/.test(c)) return;
+    const base=c.normalize("NFD")[0], code=base.charCodeAt(0)-97;
+    const t=actx.currentTime, d=.07, f0=420+((code*37)%9)*28+Math.random()*25;
+    const o=actx.createOscillator(), bp=actx.createBiquadFilter(), g=actx.createGain();
+    o.type="sawtooth"; o.frequency.setValueAtTime(f0*1.12,t); o.frequency.exponentialRampToValueAtTime(f0*.92,t+d);
+    bp.type="bandpass"; bp.Q.value=3.5; bp.frequency.value=FORM[base]|| (900+((code*53)%7)*220);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.22,t+.008); g.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(bp).connect(g).connect(master||actx.destination); o.start(t); o.stop(t+d+.02);
+  }catch(e){}
+}
+
+/* =================== SAUVEGARDE =================== */
+let found=new Set();
+try{ localStorage.removeItem("ldq-found"); }catch(e){}
+function saveFound(){} /* pas de sauvegarde : tout repart de zéro à chaque ouverture */
+
+/* =================== MOTEUR =================== */
+const $=id=>document.getElementById(id);
+const views=["title","battle","photo","video","e404","slides","letter","end"];
+const tints={title:"rgba(43,24,48,.25)",battle:"rgba(255,233,241,.55)",photo:"rgba(43,24,48,.55)",video:"rgba(43,24,48,.6)",e404:"#1d1d3a",slides:"rgba(43,24,48,.55)",letter:"rgba(43,24,48,.45)",end:"rgba(43,24,48,.5)",sunset:"rgba(0,0,0,0)"};
+function show(v){
+  const real = v==="sunset" ? null : v;
+  views.forEach(n=>$("v-"+n).classList.toggle("hidden", n!==real));
+  $("tint").style.background=tints[v];
+  if(v!=="video"){ try{$("pvid").pause();}catch(e){} }
+}
+function setHP(which,pct){ const b=$(which); b.style.width=pct+"%"; b.style.background= pct>50?"var(--mint-d)":pct>20?"#f2c14e":"#e0608f"; }
+
+let typing=null, full="", queue=[], onDone=null, mode="title", sel=0;
+let voiceOn=false;
+function type(str,voice){ voiceOn=!!voice;
+  clearInterval(typing); full=str; $("text").textContent=""; $("next").style.visibility="hidden"; let i=0;
+  typing=setInterval(()=>{ $("text").textContent+=str[i]; if(voiceOn){ if(i%2===0) babble(str[i]); } else if(str[i]!==" "&&i%2===0)beep(1250,.018,"square",.03);
+    if(++i>=str.length){clearInterval(typing);typing=null;$("next").style.visibility="visible";} },26);
+}
+function play(steps,done){ queue=steps.slice(); onDone=done; mode="story"; $("menu").classList.add("hidden"); $("dialog").classList.remove("hidden"); nextStep(); }
+function nextStep(){
+  if(!queue.length){ const d=onDone; onDone=null; d&&d(); return; }
+  const s=queue.shift();
+  if(s.endAs){ queue=[]; onDone=null; found.add(s.endAs); saveFound(); endCard(s.endAs); return; } show(s.v); if(s.m) music(s.m);
+  if(s.choice){ mode="menu"; if(s.hpP!=null) setHP("hpP",s.hpP); fx(s.fx); type(s.t);
+    buildMenu(s.choice.map(c=>({label:c.label, sub:c.sub, href:c.href, go:()=>{ queue=c.steps.concat(queue); mode="story"; $("menu").classList.add("hidden"); nextStep(); }})));
+    return; }
+  if(s.v==="photo"){ $("pimg").src=s.img; $("pcap").textContent=s.cap||""; $("ptag").textContent=s.tag||""; }
+  if(s.v==="video"){ const pv=$("pvid"); $("vtag").textContent=s.tag||""; pv.src=s.src; pv.muted=muted;
+    try{bgm.pause();}catch(e){} try{ pv.currentTime=0; const pr=pv.play(); if(pr&&pr.catch)pr.catch(()=>{ pv.muted=true; pv.play().catch(()=>{}); }); }catch(e){} }
+  if(s.v==="slides"){ startSlides(s.n); }
+  if(s.v==="letter"){ $("ltext").innerHTML=s.html; notes([659,784,988,1319],160,.18); }
+  if(s.credits){ $("v-title").innerHTML="<div class='logo'>MERCI<br>D'AVOIR JOUÉ<small>✿ Marine &amp; Mathis ✿</small></div>"+
+    "<button class='rec' id='rec'>✉ LETTRE DE RECOMMANDATION</button>";
+    $("rec").addEventListener("click",e=>{ e.stopPropagation(); beep(660,.08); openLetter(); }); }
+  if(s.hpP!=null) setHP("hpP",s.hpP);
+  if(s.hpM!=null) setHP("hpM",s.hpM);
+  fx(s.fx); type(s.t, s.voice);
+}
+function fx(f){
+  if(!f) return;
+  const el = {shakeM:"sprM",atkM:"sprM",hitM:"sprM",shakeP:"sprP",atkP:"sprP",hitP:"sprP",enter:"foe"}[f];
+  if(f==="err"){ stopMusic(); [0,140,280].forEach(d=>setTimeout(()=>beep(110,.12,"sawtooth",.06),d)); $("screen").classList.remove("flash"); void $("screen").offsetWidth; $("screen").classList.add("flash"); return; }
+  if(f==="enter"){ setHP("hpM",100); setHP("hpP",100); notes([392,523,659,784],90); return; }
+  if(f.startsWith("atk")){ $("screen").classList.remove("flash"); void $("screen").offsetWidth; $("screen").classList.add("flash"); beep(220,.25,"sawtooth",.05); }
+  const node=$(el), cls=f.startsWith("hit")?"hit":"shake";
+  node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls);
+  if(f.startsWith("hit")) beep(140,.2,"square",.05);
+}
+let slide=null;
+function startSlides(n){
+  clearInterval(slide&&slide.timer); slide={i:0,n:n,timer:null};
+  ["01","02"].forEach(k=>{const im=new Image(); im.src="assets/souvenirs/"+k+".jpg";});
+  showSlide(); slide.timer=setInterval(()=>{ if(slide.i<slide.n-1){ slide.i++; showSlide(); } else { clearInterval(slide.timer); } },3000);
+}
+function showSlide(){
+  const k=String(slide.i+1).padStart(2,"0"), im=$("simg");
+  im.style.opacity=0; setTimeout(()=>{ im.src="assets/souvenirs/"+k+".jpg"; im.style.opacity=1; },180);
+  $("scount").textContent="SOUVENIR "+(slide.i+1)+"/"+slide.n; beep(1320,.05,"triangle",.04);
+  const nx=String(slide.i+2).padStart(2,"0"); if(slide.i+1<slide.n){ const p=new Image(); p.src="assets/souvenirs/"+nx+".jpg"; }
+  $("next").style.visibility = slide.i>=slide.n-1 ? "visible" : "hidden";
+}
+function advance(){
+  if(mode!=="story") return;
+  if(slide && !$("v-slides").classList.contains("hidden") && slide.i<slide.n-1){
+    if(typing){ clearInterval(typing); typing=null; $("text").textContent=full; }
+    clearInterval(slide.timer); slide.i++; showSlide();
+    if(slide.i<slide.n-1) slide.timer=setInterval(()=>{ if(slide.i<slide.n-1){ slide.i++; showSlide(); } else clearInterval(slide.timer); },3000);
+    return; }
+  if(typing){ clearInterval(typing); typing=null; $("text").textContent=full; $("next").style.visibility="visible"; return; }
+  beep(880,.04); nextStep();
+}
+
+/* ---- menus ---- */
+let menuItems=[];
+function buildMenu(items,single){
+  menuItems=items; sel=0; const m=$("menu"); m.innerHTML=""; m.classList.toggle("one",!!single);
+  items.forEach((it,i)=>{ const b=document.createElement(it.href?"a":"button"); if(it.href){ b.href=it.href; b.target="_blank"; b.rel="noopener"; } b.innerHTML=it.label+(it.sub?"<small>"+it.sub+"</small>":"");
+    b.addEventListener("click",e=>{sel=i;renderSel(); if(it.href){ beep(660,.08); return; } pick();}); m.appendChild(b); });
+  m.classList.remove("hidden"); renderSel();
+}
+function renderSel(){ [...$("menu").children].forEach((b,i)=>b.classList.toggle("sel",i===sel)); }
+function pick(){ beep(660,.08); const it=menuItems[sel]; if(it.href){ $("menu").children[sel].click(); return; } it.go(); }
+
+function battleMenu(){
+  music("battle"); mode="menu"; show("battle"); $("dialog").classList.remove("hidden");
+  type("Que doit faire MATHIS ?");
+  const others=ORDER.filter(k=>k!=="merci"), left=others.filter(k=>!found.has(k)).length, locked=left>0;
+  buildMenu(MOVES.map(mv=>{
+    if(mv.id==="merci" && locked) return {label:"🔒 DIRE MERCI", sub:"encore "+left+" fin"+(left>1?"s":"")+" à trouver",
+      go:()=>{ beep(150,.15,"square",.05); type("Cette attaque est verrouillée... Trouve d'abord toutes les autres fins. ("+(others.length-left)+"/"+others.length+")"); }};
+    return {label:(found.has(mv.id)?"♥ ":"")+mv.label, sub:mv.sub, go:()=>startEnding(mv.id)};
+  }));
+}
+function startEnding(id){
+  popHeart(); music(id==="merci"?"sad":"battle");
+  play(ENDINGS[id].steps, ()=>{ found.add(id); saveFound(); endCard(id); });
+}
+function endCard(id){
+  mode="menu"; show("end"); const n=found.size; stopMusic(); setTimeout(()=>{ if(mode==="menu") music("title"); },1400);
+  notes(id==="merci"?[523,659,784,1047,784,1047]:[523,392,330,262],140,.14);
+  $("endcard").innerHTML =
+    "<div class='fin'>FIN "+(ORDER.indexOf(id)+1)+"/"+ORDER.length+"</div><div class='name'>"+ENDINGS[id].name+"</div>"+
+    "<div class='trophies'>"+ORDER.map(k=>found.has(k)?"<div>♥ "+ENDINGS[k].name+"</div>":"<div class='off'>? ? ?</div>").join("")+"</div>";
+  type(n<ORDER.length ? "Fins trouvées : "+n+"/"+ORDER.length+". Il en reste... Rejouer ?" : "Toutes les fins sont trouvées... Une fin secrète s'est débloquée ★");
+  const items=[{label:"↺ REJOUER", go:()=>{ setHP("hpP",100); setHP("hpM",100); battleMenu(); }}];
+  if(n>=ORDER.length) items.unshift({label:"★ FIN SECRÈTE", go:()=>{ music("sad"); play(SECRET, ()=>{ mode="menu"; buildMenu([{label:"↺ RECOMMENCER", go:()=>location.reload()}],true); }); }});
+  buildMenu(items, true);
+}
+function popHeart(){ const h=document.createElement("span"); h.className="heart-pop"; h.textContent="♥";
+  h.style.left=(40+Math.random()*20)+"%"; h.style.top="45%"; $("stage").appendChild(h); setTimeout(()=>h.remove(),1100); }
+
+/* ---- start ---- */
+let started=false;
+function start(){ if(started) return; started=true; tryPlay(); notes([523,659,784,1047],90);
+  audio(); music("title"); play(INTRO, battleMenu); }
+$("v-title").addEventListener("click",e=>{ if(!started){ e.stopPropagation(); start(); } });
+$("dialog").addEventListener("click",advance);
+$("stage").addEventListener("click",()=>{ if(started) advance(); });
+
+/* ---- lettre de recommandation ---- */
+let stars=0;
+function letterText(){
+  const v=id=>$(id).value.trim()||"—";
+  return "LETTRE DE RECOMMANDATION\nÀ l'attention du prochain copain de Marine\n\n"+
+    "Rédigée par : "+v("f-auteur")+"\nDurée de la mission : "+v("f-duree")+"\nNote globale : "+(stars?"★".repeat(stars)+"☆".repeat(5-stars)+" ("+stars+"/5)":"—")+"\n\n"+
+    "Ses plus grandes qualités :\n"+v("f-qualites")+"\n\nSes petits défauts :\n"+v("f-defauts")+"\n\nConseils au prochain :\n"+v("f-conseils")+"\n\nMot de la fin :\n"+v("f-fin")+
+    "\n\n— "+v("f-auteur")+"\n(envoyée depuis The Rupture Game ✿)";
+}
+function updLinks(){
+  const to="marinecerriall@gmail.com", su="Lettre de recommandation pour Marine ✿", body=letterText();
+  $("send2").href="mailto:"+to+"?subject="+encodeURIComponent(su)+"&body="+encodeURIComponent(body);
+}
+function openLetter(){ $("lw").classList.remove("hidden"); updLinks(); }
+$("lclose").addEventListener("click",()=>{ $("lw").classList.add("hidden"); });
+$("lw").addEventListener("input",updLinks);
+[...$("f-stars").children].forEach(sp=>sp.addEventListener("click",()=>{ stars=+sp.dataset.n;
+  [...$("f-stars").children].forEach(x=>x.classList.toggle("on",+x.dataset.n<=stars)); beep(1200,.04); updLinks(); }));
+function pdfSafe(t){ return t.replace(/★/g,"*").replace(/☆/g,"-").replace(/[’‘]/g,"'").replace(/[“”«»]/g,'"').replace(/—/g,"-").replace(/[^\x00-\xFFœŒ]/g,""); }
+function makePDF(){
+  const { jsPDF } = window.jspdf; const doc=new jsPDF({unit:"mm",format:"a4"}); const W=210, M=20; let y=24;
+  doc.setFillColor(255,233,241); doc.rect(0,0,W,297,"F");
+  doc.setDrawColor(74,44,64); doc.setLineWidth(1.2); doc.rect(10,10,W-20,277);
+  doc.setTextColor(224,96,143); doc.setFont("helvetica","bold"); doc.setFontSize(22); doc.text("Lettre de recommandation",W/2,y+6,{align:"center"}); y+=14;
+  doc.setTextColor(74,44,64); doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.text("À l'attention du prochain copain de Marine",W/2,y,{align:"center"}); y+=12;
+  const v=id=>pdfSafe($(id).value.trim()||"-");
+  const line=(k,val)=>{ doc.setFont("helvetica","bold"); doc.text(k,M,y); doc.setFont("helvetica","normal"); doc.text(val,M+48,y); y+=8; };
+  line("Rédigée par :",v("f-auteur")); line("Durée de la mission :",v("f-duree")); line("Note globale :",stars?stars+" / 5":"-"); y+=4;
+  [["Ses plus grandes qualités","f-qualites"],["Ses petits défauts","f-defauts"],["Conseils au prochain","f-conseils"],["Mot de la fin","f-fin"]].forEach(([k,id])=>{
+    if(y>255){ doc.addPage(); doc.setFillColor(255,233,241); doc.rect(0,0,W,297,"F"); y=24; }
+    doc.setTextColor(224,96,143); doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text(k,M,y); y+=7;
+    doc.setTextColor(74,44,64); doc.setFont("helvetica","normal"); doc.setFontSize(11);
+    doc.splitTextToSize(v(id),W-2*M).forEach(l=>{ if(y>275){ doc.addPage(); y=24; } doc.text(l,M,y); y+=6; }); y+=6; });
+  y=Math.max(y,250); doc.setFont("helvetica","italic"); doc.text("- "+v("f-auteur"),W-M,y,{align:"right"});
+  doc.setFontSize(9); doc.text("Envoyée depuis The Rupture Game",W/2,282,{align:"center"});
+  return doc.output("blob");
+}
+$("send").addEventListener("click",()=>{
+  beep(880,.08); $("send").disabled=true; $("lstatus").textContent="Envoi en cours...";
+  try{
+    $("fs-text").value=letterText();
+    $("fs-next").value=location.href.split("?")[0].split("#")[0]+"?envoye=1";
+    try{
+      const blob=makePDF(), file=new File([blob],"lettre-de-recommandation.pdf",{type:"application/pdf"});
+      const dt=new DataTransfer(); dt.items.add(file); $("fs-file").files=dt.files;
+    }catch(e){ /* PDF impossible : la lettre part quand même en texte */ }
+    $("fs").submit();
+  }catch(e){ $("send").disabled=false; $("lstatus").textContent="Oups, l'envoi a échoué. Essaie « Envoyer par mon appli mail »."; }
+});
+if(/[?&]envoye=1/.test(location.search)){
+  const d=document.createElement("div"); d.className="sent";
+  d.innerHTML="<div><b>Lettre envoyée ✿</b>Marine a bien reçu ta lettre de recommandation.<br><br>Merci d'avoir joué.</div>";
+  d.addEventListener("click",()=>{ d.remove(); history.replaceState(null,"",location.pathname); }); document.body.appendChild(d);
+}
+$("copy").addEventListener("click",()=>{ try{ navigator.clipboard.writeText(letterText()).then(()=>{$("copy").textContent="Copiée ✓";},()=>{$("copy").textContent="Copie impossible";}); }catch(e){ $("copy").textContent="Copie impossible"; } });
+
+/* ---- contrôles ---- */
+$("mute").addEventListener("click",e=>{e.stopPropagation();toggleMute();});
+function key(k){
+  if(!started){ if(k==="a") start(); return; }
+  if(mode==="story"){ if(k==="a"||k==="b") advance(); return; }
+  const n=menuItems.length; if(!n) return;
+  const cols=$("menu").classList.contains("one")?1:2;
+  if(k==="left") sel=(sel+n-1)%n; else if(k==="right") sel=(sel+1)%n;
+  else if(k==="up") sel=(sel+n-cols)%n; else if(k==="down") sel=(sel+cols)%n;
+  else if(k==="a") return pick(); else return;
+  beep(990,.03); renderSel();
+}
+document.querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();tryPlay();key(b.dataset.k);}));
+document.addEventListener("keydown",e=>{ if(!$("lw").classList.contains("hidden")) return;const m={ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down",Enter:"a"," ":"a",Escape:"b"};
+  if(m[e.key]){e.preventDefault();key(m[e.key]);}});
+</script>
+</body>
+</html>
