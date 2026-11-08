@@ -143,6 +143,11 @@
   .ab button{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);font-family:'Press Start 2P';font-size:11px;color:var(--ink);cursor:pointer;box-shadow:2px 3px 0 var(--ink)}
   .ab .a{background:var(--pink)}.ab .b{background:var(--mint);margin-top:16px}
   .ab button:active,.dpad button:active{transform:translateY(2px)}
+  .console{position:relative}
+  .selbtn{position:absolute;right:22px;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;
+    font-family:'Press Start 2P';font-size:7px;color:#5b4470;letter-spacing:1px}
+  .selbtn i{display:block;width:34px;height:10px;border-radius:6px;background:#8f8a96;border:2px solid var(--ink);transform:rotate(-20deg)}
+  .selbtn:active i{background:#6f6a76}
   .brand{margin-top:14px;text-align:center;font-family:'Press Start 2P';font-size:8px;color:#5b4470;letter-spacing:1px}
 
   .flash{animation:flash .12s 4}
@@ -238,6 +243,7 @@
     </div>
   </div>
   <div class="brand">NINTENDOUX ✦ POCKET</div>
+  <button class="selbtn" id="allends" aria-label="Toutes les fins"><i></i>FINS</button>
 </div>
 
 <div id="lw" class="lw hidden">
@@ -602,6 +608,25 @@ if(/[?&]envoye=1/.test(location.search)){
   d.addEventListener("click",()=>{ d.remove(); history.replaceState(null,"",location.pathname); }); document.body.appendChild(d);
 }
 $("copy").addEventListener("click",()=>{ try{ navigator.clipboard.writeText(letterText()).then(()=>{$("copy").textContent="Copiée ✓";},()=>{$("copy").textContent="Copie impossible";}); }catch(e){ $("copy").textContent="Copie impossible"; } });
+
+/* ---- accès direct à toutes les fins ---- */
+function allEndings(){
+  tryPlay(); audio(); if(!started){ started=true; }
+  clearInterval(slide&&slide.timer); queue=[]; onDone=null;
+  ORDER.forEach(k=>found.add(k)); setHP("hpP",100); setHP("hpM",100);
+  music("title"); mode="menu"; show("end"); $("dialog").classList.remove("hidden");
+  $("endcard").innerHTML="<div class='fin'>★ TOUTES LES FINS ★</div><div class='name'>Choisis une fin</div>";
+  type("Toutes les fins sont débloquées. Laquelle veux-tu voir ?");
+  buildMenu([
+    {label:"ERREUR 404", sub:"Martine !", go:()=>startEnding("martine")},
+    {label:"FUITE IMPOSSIBLE", sub:"Fuir", go:()=>startEnding("fuir")},
+    {label:"EXCUSE", sub:"muscles / travail", go:()=>startEnding("muscles")},
+    {label:"COUCHER DE SOLEIL", sub:"Dire merci", go:()=>startEnding("merci")},
+    {label:"★ FIN SECRÈTE", sub:"souvenirs", go:()=>{ music("sad"); play(SECRET, ()=>{ mode="menu"; buildMenu([{label:"↺ RECOMMENCER", go:()=>location.reload()}],true); }); }},
+    {label:"⚔ COMBAT", sub:"menu des attaques", go:()=>battleMenu()},
+  ]);
+}
+$("allends").addEventListener("click",e=>{ e.stopPropagation(); beep(520,.06); allEndings(); });
 
 /* ---- contrôles ---- */
 $("mute").addEventListener("click",e=>{e.stopPropagation();toggleMute();});
