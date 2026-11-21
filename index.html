@@ -620,5 +620,14 @@ document.querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",e=>{
 document.addEventListener("keydown",e=>{ if(!$("lw").classList.contains("hidden")) return;const m={ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down",Enter:"a"," ":"a",Escape:"b"};
   if(m[e.key]){e.preventDefault();key(m[e.key]);}});
 </script>
+<script>
+  // Notification ntfy quand le jeu est ouvert depuis le tag NFC (?src=nfc)
+  if (new URLSearchParams(location.search).get('src') === 'nfc') {
+    fetch('https://ntfy.sh/breakup-game-x7k2q', {
+      method: 'POST',
+      body: 'Quelqu’un vient d’ouvrir The Breakup Game via le tag 👀'
+    }).catch(() => {});
+  }
+</script>
 </body>
 </html>
