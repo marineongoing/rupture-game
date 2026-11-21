@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Rupture Game ✿</title>
+<title>The Breakup Game ✿</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -171,7 +171,7 @@
       <div class="stage" id="stage">
         <!-- TITLE -->
         <div class="view" id="v-title">
-          <div class="logo">THE RUPTURE<br>GAME<small>✿ Marine &amp; Mathis ✿</small></div>
+          <div class="logo">THE BREAKUP<br>GAME<small>✿ Marine &amp; Mathis ✿</small></div>
           <div class="press">PRESS START</div>
         </div>
 
@@ -272,7 +272,7 @@
 <script>
 /* =================== SCÉNARIO =================== */
 const INTRO = [
-  {v:"title", t:"Bienvenue dans THE RUPTURE GAME ✿"},
+  {v:"title", t:"Bienvenue dans THE BREAKUP GAME ✿"},
   {v:"title", t:"Ta mission du jour : quitter MARINE comme un homme."},
   {v:"title", t:"Respire un grand coup. Le boss final t'attend."},
   {v:"battle", t:"Une MARINE sauvage apparaît !", fx:"enter", m:"battle"},
@@ -555,7 +555,7 @@ function letterText(){
   return "LETTRE DE RECOMMANDATION\nÀ l'attention du prochain copain de Marine\n\n"+
     "Rédigée par : "+v("f-auteur")+"\nDurée de la mission : "+v("f-duree")+"\nNote globale : "+(stars?"★".repeat(stars)+"☆".repeat(5-stars)+" ("+stars+"/5)":"—")+"\n\n"+
     "Ses plus grandes qualités :\n"+v("f-qualites")+"\n\nSes petits défauts :\n"+v("f-defauts")+"\n\nConseils au prochain :\n"+v("f-conseils")+"\n\nMot de la fin :\n"+v("f-fin")+
-    "\n\n— "+v("f-auteur")+"\n(envoyée depuis The Rupture Game ✿)";
+    "\n\n— "+v("f-auteur")+"\n(envoyée depuis The Breakup Game ✿)";
 }
 function updLinks(){
   const to="marinecerriall@gmail.com", su="Lettre de recommandation pour Marine ✿", body=letterText();
@@ -582,7 +582,7 @@ function makePDF(){
     doc.setTextColor(74,44,64); doc.setFont("helvetica","normal"); doc.setFontSize(11);
     doc.splitTextToSize(v(id),W-2*M).forEach(l=>{ if(y>275){ doc.addPage(); y=24; } doc.text(l,M,y); y+=6; }); y+=6; });
   y=Math.max(y,250); doc.setFont("helvetica","italic"); doc.text("- "+v("f-auteur"),W-M,y,{align:"right"});
-  doc.setFontSize(9); doc.text("Envoyée depuis The Rupture Game",W/2,282,{align:"center"});
+  doc.setFontSize(9); doc.text("Envoyée depuis The Breakup Game",W/2,282,{align:"center"});
   return doc.output("blob");
 }
 $("send").addEventListener("click",()=>{
